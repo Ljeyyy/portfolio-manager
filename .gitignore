@@ -1,0 +1,18 @@
+# Environnement virtuel
+.venv/
+
+# Base de données locale
+*.db
+
+# Variables d'environnement (secrets !)
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db

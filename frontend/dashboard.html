@@ -1,0 +1,125 @@
+<!-- frontend/dashboard.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen" x-data="portfolioApp()" x-init="init()">
+
+  <!-- Navbar -->
+  <nav class="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+    <h1 class="text-lg font-bold text-blue-400">📊 Portfolio Manager</h1>
+    <button @click="logout()" class="text-gray-400 hover:text-red-400 text-sm transition">Déconnexion</button>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Sélecteur client -->
+    <div class="flex flex-col sm:flex-row gap-3 mb-6">
+      <select x-model="selectedClientId" @change="loadDashboard()"
+        class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white flex-1">
+        <option value="">— Sélectionner un client —</option>
+        <template x-for="c in clients" :key="c.id">
+          <option :value="c.id" x-text="`${c.name} (${c.risk_profile})`"></option>
+        </template>
+      </select>
+      <label class="flex items-center gap-2 text-gray-400 text-sm">
+        <input type="checkbox" x-model="useMock" @change="loadDashboard()" class="rounded"> Prix mock
+      </label>
+      <button @click="exportCsv()"
+        class="bg-green-700 hover:bg-green-600 px-4 py-2 rounded-lg text-sm font-medium transition"
+        :disabled="!selectedClientId">
+        ⬇ Exporter CSV
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="text-center text-gray-400 py-10">Chargement…</div>
+
+    <!-- Dashboard -->
+    <div x-show="dashboard && !loading">
+      <!-- KPIs -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <p class="text-gray-400 text-xs mb-1">Valeur totale</p>
+          <p class="text-xl font-bold text-white" x-text="fmt(dashboard?.portfolio?.total_value) + ' $'"></p>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <p class="text-gray-400 text-xs mb-1">Coût total</p>
+          <p class="text-xl font-bold text-white" x-text="fmt(dashboard?.portfolio?.total_cost) + ' $'"></p>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <p class="text-gray-400 text-xs mb-1">P&L total</p>
+          <p class="text-xl font-bold"
+            :class="dashboard?.portfolio?.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'"
+            x-text="fmt(dashboard?.portfolio?.total_pnl) + ' $'"></p>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <p class="text-gray-400 text-xs mb-1">P&L %</p>
+          <p class="text-xl font-bold"
+            :class="dashboard?.portfolio?.total_pnl_pct >= 0 ? 'text-green-400' : 'text-red-400'"
+            x-text="(dashboard?.portfolio?.total_pnl_pct ?? 0).toFixed(2) + '%'"></p>
+        </div>
+      </div>
+
+      <!-- Allocation -->
+      <div class="bg-gray-900 rounded-xl p-4 border border-gray-800 mb-6">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">Allocation par classe d'actif</h2>
+        <div class="flex flex-wrap gap-3">
+          <template x-for="[cls, pct] in Object.entries(dashboard?.portfolio?.allocation ?? {})">
+            <div class="bg-gray-800 rounded-lg px-4 py-2 text-sm">
+              <span class="text-gray-300" x-text="cls"></span>
+              <span class="ml-2 font-bold text-blue-400" x-text="pct + '%'"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Positions -->
+      <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-gray-700 text-gray-400 text-xs uppercase">
+            <tr>
+              <th class="px-4 py-3 text-left">Ticker</th>
+              <th class="px-4 py-3 text-left">Nom</th>
+              <th class="px-4 py-3 text-left">Classe</th>
+              <th class="px-4 py-3 text-right">Qté</th>
+              <th class="px-4 py-3 text-right">Px Achat</th>
+              <th class="px-4 py-3 text-right">Px Actuel</th>
+              <th class="px-4 py-3 text-right">Valeur</th>
+              <th class="px-4 py-3 text-right">P&L</th>
+              <th class="px-4 py-3 text-right">P&L %</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="pos in dashboard?.portfolio?.positions" :key="pos.id">
+              <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition">
+                <td class="px-4 py-3 font-mono font-bold text-blue-400" x-text="pos.ticker"></td>
+                <td class="px-4 py-3 text-gray-300" x-text="pos.name"></td>
+                <td class="px-4 py-3">
+                  <span class="bg-gray-700 px-2 py-0.5 rounded text-xs" x-text="pos.asset_class"></span>
+                </td>
+                <td class="px-4 py-3 text-right" x-text="pos.quantity"></td>
+                <td class="px-4 py-3 text-right text-gray-400" x-text="fmt(pos.purchase_price)"></td>
+                <td class="px-4 py-3 text-right" x-text="fmt(pos.current_price)"></td>
+                <td class="px-4 py-3 text-right font-semibold" x-text="fmt(pos.value) + ' $'"></td>
+                <td class="px-4 py-3 text-right font-semibold"
+                  :class="pos.pnl >= 0 ? 'text-green-400' : 'text-red-400'"
+                  x-text="(pos.pnl >= 0 ? '+' : '') + fmt(pos.pnl)"></td>
+                <td class="px-4 py-3 text-right"
+                  :class="pos.pnl_pct >= 0 ? 'text-green-400' : 'text-red-400'"
+                  x-text="(pos.pnl_pct >= 0 ? '+' : '') + pos.pnl_pct + '%'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

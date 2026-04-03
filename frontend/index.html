@@ -1,0 +1,61 @@
+<!-- frontend/index.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio Manager — Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 min-h-screen flex items-center justify-center">
+  <div class="bg-gray-900 p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-800">
+    <h1 class="text-2xl font-bold text-white mb-2 text-center">📊 Portfolio Manager</h1>
+    <p class="text-gray-400 text-sm text-center mb-6">Connectez-vous pour accéder</p>
+
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-gray-300 text-sm mb-1">Utilisateur</label>
+        <input id="username" type="text" value="admin"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-gray-300 text-sm mb-1">Mot de passe</label>
+        <input id="password" type="password" value="admin123"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div id="error" class="text-red-400 text-sm hidden"></div>
+      <button type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition">
+        Se connecter
+      </button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      const formData = new FormData();
+      formData.append('username', username);
+      formData.append('password', password);
+
+      try {
+        const res = await fetch('/api/auth/login', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('token', data.access_token);
+          window.location.href = '/app';
+        } else {
+          document.getElementById('error').textContent = data.detail;
+          document.getElementById('error').classList.remove('hidden');
+        }
+      } catch {
+        document.getElementById('error').textContent = 'Erreur de connexion au serveur';
+        document.getElementById('error').classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
